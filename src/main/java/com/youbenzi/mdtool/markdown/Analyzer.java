@@ -2,7 +2,9 @@ package com.youbenzi.mdtool.markdown;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.youbenzi.mdtool.markdown.bean.Block;
 import com.youbenzi.mdtool.markdown.bean.TextLinePiece;
@@ -19,7 +21,9 @@ import com.youbenzi.mdtool.tool.Tools;
 public class Analyzer {
 
 	private static List<String> mdTokenInLine = Arrays.asList(MDToken.BOLD_WORD1, MDToken.BOLD_WORD2, MDToken.ITALIC_WORD,
-			MDToken.ITALIC_WORD_2, MDToken.STRIKE_WORD, MDToken.CODE_WORD, MDToken.IMG, MDToken.LINK);
+			MDToken.ITALIC_WORD_2, MDToken.STRIKE_WORD, MDToken.CODE_WORD, MDToken.IMG, MDToken.FOOTNOTE_REF, MDToken.LINK);
+
+	public static Map<String, String> footnoteDefs = new LinkedHashMap<String, String>();
 
 	/**
 	 * 将文本解析为语法块
@@ -30,6 +34,7 @@ public class Analyzer {
 	 */
 	public static List<Block> analyze(String content) {
 		content = formatText(content);
+		content = extractFootnoteDefs(content);
 		SyntaxFilter filter = new CodePartFilter(
 				new TablePartFilter(
 					new HeaderOneLineFilter(
@@ -132,6 +137,11 @@ public class Analyzer {
 				valuePart.setUrl(piece.getUrl());
 				result.add(valuePart);
 				break;
+			case FOOTNOTE:
+				valuePart = createValuePart(piece.getUrl(), currentTypesClone);
+				valuePart.setUrl(piece.getUrl());
+				result.add(valuePart);
+				break;
 			case COMMON:
 			default:
 				String sencondPart = text.substring(piece.getBeginIndex() + mdToken.length(), secondPartEndIndex);
@@ -182,6 +192,15 @@ public class Analyzer {
 		TextLinePiece textLinePiece = null;
 		if (mdToken.equals(MDToken.LINK) || mdToken.equals(MDToken.IMG)) {
 			textLinePiece = hasLinkOrImage(text, mdToken.equals(MDToken.LINK));
+		} else if (mdToken.equals(MDToken.FOOTNOTE_REF)) {
+			int j = text.indexOf("]", i + mdToken.length());
+			if (j > -1) {
+				String footnoteId = text.substring(i + mdToken.length(), j).trim();
+				if (!footnoteId.isEmpty()) {
+					textLinePiece = new TextLinePiece(i, j, PieceType.FOOTNOTE);
+					textLinePiece.setUrl(footnoteId);
+				}
+			}
 		} else {
 			int j = text.indexOf(mdToken, i + mdToken.length());
 			if(j > -1) {
@@ -278,5 +297,44 @@ public class Analyzer {
 		text = text.replaceAll("\t", "    ");
 		text = Tools.convertValue(text);
 		return text;
+	}
+
+	private static String extractFootnoteDefs(String content) {
+		footnoteDefs.clear();
+		List<String> lines = Tools.read2List(content);
+		StringBuilder newContent = new StringBuilder();
+		for (int i = 0, l = lines.size(); i < l; i++) {
+			String line = lines.get(i);
+			String trimmed = line.trim();
+			if (trimmed.startsWith(MDToken.FOOTNOTE_REF) && trimmed.contains("]:")) {
+				int bracketEnd = trimmed.indexOf("]:");
+				String id = trimmed.substring(MDToken.FOOTNOTE_REF.length(), bracketEnd).trim();
+				if (id.isEmpty()) {
+					newContent.append(line).append("\n");
+					continue;
+				}
+				StringBuilder defContent = new StringBuilder(trimmed.substring(bracketEnd + 2).trim());
+				for (i = i + 1; i < l; i++) {
+					String nextLine = lines.get(i);
+					if (nextLine.startsWith("    ") || nextLine.startsWith("\t")) {
+						if (defContent.length() > 0) {
+							defContent.append("\n");
+						}
+						defContent.append(nextLine.trim());
+					} else if (nextLine.trim().isEmpty()) {
+						if (i + 1 < l && lines.get(i + 1).trim().startsWith(MDToken.FOOTNOTE_REF)) {
+							continue;
+						}
+					} else {
+						i--;
+						break;
+					}
+				}
+				footnoteDefs.put(id, defContent.toString());
+			} else {
+				newContent.append(line).append("\n");
+			}
+		}
+		return newContent.toString();
 	}
 }

@@ -21,5 +21,6 @@ public enum BlockType {
 	ITALIC_WORD,
 	STRIKE_WORD,
 	CODE_WORD,
-	LINK
+	LINK,
+	FOOTNOTE_REF
 }

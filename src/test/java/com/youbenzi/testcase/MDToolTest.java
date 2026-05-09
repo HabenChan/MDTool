@@ -252,6 +252,7 @@ public class MDToolTest {
 	@Test
 	public void testFromFile() throws IOException {
 		String result = MDTool.markdown2Html(new File(MDToolTest.class.getResource("/file.md").getFile()));
+		System.out.println(result);
 		Assert.assertNotNull(result);
 		Assert.assertFalse(result.isEmpty());
 	}
@@ -262,7 +263,6 @@ public class MDToolTest {
 				new File(MDToolTest.class.getResource("/fileGBK.md").getFile()), "GBK");
 		Assert.assertNotNull(result);
 	}
-
 	@Test
 	public void testBoldInParagraph() {
 		String result = MDTool.markdown2Html("aaa **bold** bbb");
@@ -289,5 +289,61 @@ public class MDToolTest {
 	public void testSpecialCharactersEscaped() {
 		String result = MDTool.markdown2Html("\\\\ backslash");
 		Assert.assertFalse(result.contains("$BACKSLASH"));
+	}
+
+	@Test
+	public void testFootnoteReference() {
+		String content = "Text with a footnote.[^1]\n\n[^1]: This is footnote content.";
+		String result = MDTool.markdown2Html(content);
+		Assert.assertTrue(result.contains("<sup id=\"fnref:1\">"));
+		Assert.assertTrue(result.contains("<a href=\"#fn:1\">"));
+	}
+
+	@Test
+	public void testFootnoteDefinition() {
+		String content = "Text with footnote[^a].\n\n[^a]: The definition.";
+		String result = MDTool.markdown2Html(content);
+		Assert.assertTrue(result.contains("<div class=\"footnotes\">"));
+		Assert.assertTrue(result.contains("<li id=\"fn:a\">"));
+		Assert.assertTrue(result.contains("The definition."));
+	}
+
+	@Test
+	public void testMultipleFootnotes() {
+		String content = "First[^1] and second[^2].\n\n[^1]: Alpha.\n\n[^2]: Beta.";
+		String result = MDTool.markdown2Html(content);
+		Assert.assertTrue(result.contains("<sup id=\"fnref:1\">"));
+		Assert.assertTrue(result.contains("<sup id=\"fnref:2\">"));
+		Assert.assertTrue(result.contains("<li id=\"fn:1\">"));
+		Assert.assertTrue(result.contains("<li id=\"fn:2\">"));
+	}
+
+	@Test
+	public void testNamedFootnote() {
+		String content = "Ref to a note[^mynote].\n\n[^mynote]: Named note content.";
+		String result = MDTool.markdown2Html(content);
+		Assert.assertTrue(result.contains("<sup id=\"fnref:mynote\">"));
+		Assert.assertTrue(result.contains("<li id=\"fn:mynote\">"));
+	}
+
+	@Test
+	public void testBackLinkInFootnote() {
+		String content = "Text.[^1]\n\n[^1]: Content.";
+		String result = MDTool.markdown2Html(content);
+		Assert.assertTrue(result.contains("<a href=\"#fnref:1\">"));
+	}
+
+	@Test
+	public void testNoFootnoteDivWhenEmpty() {
+		String result = MDTool.markdown2Html("No footnotes here.");
+		Assert.assertFalse(result.contains("<div class=\"footnotes\">"));
+	}
+
+	@Test
+	public void testFootnoteWithLinkInText() {
+		String content = "A [link](http://example.com) and a footnote[^1].\n\n[^1]: note.";
+		String result = MDTool.markdown2Html(content);
+		Assert.assertTrue(result.contains("<a href=\"http://example.com\""));
+		Assert.assertTrue(result.contains("<sup id=\"fnref:1\">"));
 	}
 }

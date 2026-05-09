@@ -59,6 +59,6 @@ public class TextLinePiece {
 	}
 
 	public enum PieceType {
-		LINK, IMAGE, COMMON
+		LINK, IMAGE, FOOTNOTE, COMMON
 	}
 }

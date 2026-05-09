@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
+import com.youbenzi.mdtool.markdown.Analyzer;
 import com.youbenzi.mdtool.markdown.BlockType;
 import com.youbenzi.mdtool.markdown.MDToken;
 import com.youbenzi.mdtool.markdown.TableCellAlign;
@@ -73,6 +76,20 @@ public class HTMLDecorator implements Decorator {
 	}
 
 	public String outputHtml() {
+		Map<String, String> defs = Analyzer.footnoteDefs;
+		if (!defs.isEmpty()) {
+			content.append("<div class=\"footnotes\">\n<hr>\n<ol>\n");
+			for (Entry<String, String> entry : defs.entrySet()) {
+				String id = entry.getKey();
+				String def = entry.getValue();
+				content.append("<li id=\"fn:").append(id).append("\">");
+				content.append("<p>").append(def);
+				content.append("<a href=\"#fnref:").append(id).append("\">&#8617;</a>");
+				content.append("</p>");
+				content.append("</li>\n");
+			}
+			content.append("</ol>\n</div>\n");
+		}
 		return content.toString();
 	}
 
@@ -149,6 +166,9 @@ public class HTMLDecorator implements Decorator {
 					+ valuePart.getTitle() + "\" />";
 		case ROW:
 			return "<br/>";
+		case FOOTNOTE_REF:
+			String fnId = valuePart.getUrl();
+			return "<sup id=\"fnref:" + fnId + "\"><a href=\"#fn:" + fnId + "\">[" + fnId + "]</a></sup>";
 		default:
 			return value;
 		}

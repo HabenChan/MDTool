@@ -23,6 +23,7 @@ public class MDToken {
 	public static final String STRIKE_WORD = "~~";
 	public static final String CODE_WORD = "`";
 	public static final String ROW = "  ";
+	public static final String FOOTNOTE_REF = "[^";	
 	public static final String TABLE_COL = "|";
 
 	public static final Map<String, String> PLACEHOLDER_MAP = new LinkedHashMap<String, String>() { // 需要显示的特殊符号的占位符
@@ -62,6 +63,8 @@ public class MDToken {
 			return BlockType.LINK;
 		} else if (mdToken.equals(ROW)) {
 			return BlockType.ROW;
+		} else if (mdToken.equals(FOOTNOTE_REF)) {
+			return BlockType.FOOTNOTE_REF;
 		} else {
 			return BlockType.NONE;
 		}
